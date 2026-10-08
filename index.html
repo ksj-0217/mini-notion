@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f7a5a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <!-- 아이폰 홈 화면용 -->
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="미니 노션">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>미니 노션</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar collapsed" id="sidebar">
+      <div class="brand"><span class="brand-mark">M</span>미니 노션<button class="side-toggle" id="side-toggle" type="button" aria-expanded="false">페이지 목록</button></div>
+      <div class="section-label">페이지</div>
+      <ul class="page-list" id="page-list"></ul>
+      <button class="add-page" id="add-page" type="button">+ 새 페이지</button>
+      <div class="side-foot">
+        <kbd>/</kbd> 블록 종류 고르기<br>
+        <kbd>#</kbd> <kbd>##</kbd> <kbd>-</kbd> <kbd>[]</kbd> + 공백: 단축키<br>
+        <kbd>Enter</kbd> 새 블록 · <kbd>Backspace</kbd> 지우기
+      </div>
+    </aside>
+    <main class="editor">
+      <div class="doc">
+        <h1 class="page-title" id="page-title" contenteditable="true" spellcheck="false"></h1>
+        <div class="blocks" id="blocks"></div>
+        <div class="slash-menu" id="slash-menu" hidden></div>
+      </div>
+    </main>
+  </div>
+  <div class="saved" id="saved" aria-live="polite"></div>
+  <script src="app.js"></script>
+  <script>
+    // 서비스 워커 등록: https 주소(또는 localhost)에서만 동작합니다
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js").catch(err => console.warn("서비스 워커 등록 실패", err));
+      });
+    }
+  </script>
+</body>
+</html>
