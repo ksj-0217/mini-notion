@@ -1,6 +1,6 @@
 // 미니 노션 서비스 워커: 앱 파일을 미리 저장해 두고 인터넷 없이도 열리게 합니다.
 // 파일을 고친 뒤에는 CACHE 이름의 숫자를 올려야 폰에 새 버전이 반영됩니다.
-const CACHE = "mini-notion-v1";
+const CACHE = "mini-notion-v2";
 const FILES = [
   "./",
   "./index.html",
@@ -28,19 +28,6 @@ self.addEventListener("fetch", event => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-
-  // 구글 글꼴: 한 번 받으면 저장해 두고, 인터넷이 없으면 저장본(없으면 기본 글꼴) 사용
-  if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") {
-    event.respondWith(
-      caches.open(CACHE).then(cache =>
-        cache.match(req).then(hit => {
-          const net = fetch(req).then(res => { cache.put(req, res.clone()); return res; }).catch(() => hit);
-          return hit || net;
-        })
-      )
-    );
-    return;
-  }
 
   if (url.origin !== self.location.origin) return;
 

@@ -11,7 +11,7 @@
   --accent-soft: #dcefe5;
   --menu: #ffffff;
   --shadow: 0 10px 30px rgba(31, 35, 41, .14), 0 0 0 1px rgba(31, 35, 41, .06);
-  --font: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
