@@ -13,29 +13,67 @@
   <meta name="apple-mobile-web-app-title" content="미니 노션">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>미니 노션</title>
+  <script>
+    // 고른 화면 테마를 그리기 전에 적용 (깜빡임 방지)
+    try { var t = localStorage.getItem("mini-notion-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <script>
+    // 고른 화면 테마를 그리기 전에 적용 (깜빡임 방지)
+    try { var t = localStorage.getItem("mini-notion-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app">
     <aside class="sidebar collapsed" id="sidebar">
       <div class="brand"><span class="brand-mark">M</span>미니 노션<button class="side-toggle" id="side-toggle" type="button" aria-expanded="false">페이지 목록</button></div>
+      <input class="search" id="search" type="search" placeholder="검색 (제목·내용)" aria-label="페이지 검색" autocomplete="off">
       <div class="section-label">페이지</div>
       <ul class="page-list" id="page-list"></ul>
       <button class="add-page" id="add-page" type="button">+ 새 페이지</button>
+      <div class="side-tools">
+        <button class="tool-btn" id="export-btn" type="button">⬇ 백업 내보내기</button>
+        <button class="tool-btn" id="import-btn" type="button">⬆ 백업 가져오기</button>
+      </div>
       <div class="side-foot">
         <kbd>/</kbd> 블록 종류 고르기<br>
-        <kbd>#</kbd> <kbd>##</kbd> <kbd>-</kbd> <kbd>[]</kbd> + 공백: 단축키<br>
-        <kbd>Enter</kbd> 새 블록 · <kbd>Backspace</kbd> 지우기
+        <kbd>#</kbd> <kbd>-</kbd> <kbd>1.</kbd> <kbd>[]</kbd> <kbd>&gt;</kbd> + 공백: 단축키<br>
+        <kbd>Ctrl</kbd>+<kbd>B</kbd> <kbd>I</kbd> <kbd>U</kbd> 글자 꾸미기<br>
+        <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> 블록 옮기기<br>
+        <kbd>Ctrl</kbd>+<kbd>Z</kbd> 되돌리기
       </div>
     </aside>
     <main class="editor">
+      <div class="topbar">
+        <div class="crumb" id="crumb"></div>
+        <div class="top-actions">
+          <button class="icon-btn" id="undo" type="button" title="되돌리기 (Ctrl+Z)" aria-label="되돌리기">↶</button>
+          <button class="icon-btn" id="redo" type="button" title="다시 실행 (Ctrl+Shift+Z)" aria-label="다시 실행">↷</button>
+          <button class="icon-btn theme-btn" id="theme" type="button"></button>
+        </div>
+      </div>
       <div class="doc">
+        <div class="page-head">
+          <button class="page-icon" id="page-icon" type="button" aria-label="아이콘 바꾸기" hidden></button>
+          <button class="add-icon" id="add-icon" type="button">☺ 아이콘 추가</button>
+        </div>
         <h1 class="page-title" id="page-title" contenteditable="true" spellcheck="false"></h1>
         <div class="blocks" id="blocks"></div>
         <div class="slash-menu" id="slash-menu" hidden></div>
       </div>
     </main>
   </div>
+  <div class="popover" id="block-menu" hidden></div>
+  <div class="popover emoji-pop" id="emoji-menu" hidden></div>
+  <div class="fmt-bar" id="fmt-bar" hidden>
+    <button type="button" data-cmd="bold" aria-label="굵게"><b>B</b></button>
+    <button type="button" data-cmd="italic" aria-label="기울임"><i>I</i></button>
+    <button type="button" data-cmd="underline" aria-label="밑줄"><u>U</u></button>
+    <button type="button" data-cmd="strikeThrough" aria-label="취소선"><s>S</s></button>
+  </div>
+  <div class="drop-line" id="drop-line" hidden></div>
+  <input type="file" id="file-input" multiple hidden>
+  <input type="file" id="import-input" accept=".json,application/json" hidden>
   <div class="saved" id="saved" aria-live="polite"></div>
   <script src="app.js"></script>
   <script>

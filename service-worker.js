@@ -1,6 +1,6 @@
 // 미니 노션 서비스 워커: 앱 파일을 미리 저장해 두고 인터넷 없이도 열리게 합니다.
 // 파일을 고친 뒤에는 CACHE 이름의 숫자를 올려야 폰에 새 버전이 반영됩니다.
-const CACHE = "mini-notion-v2";
+const CACHE = "mini-notion-v3";
 const FILES = [
   "./",
   "./index.html",

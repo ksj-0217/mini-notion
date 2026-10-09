@@ -147,16 +147,19 @@
       savedEl.textContent = "저장 공간이 부족하거나 이 브라우저에서는 저장되지 않아요";
     }
   }
-  let saveTimer;
+  let saveTimer = 0;
   function save() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(commit, 300);
   }
   function commit() {
     clearTimeout(saveTimer);
+    saveTimer = 0;
     record();
     persist();
   }
+  // 저장 대기 중인 변경이 있을 때만 바로 저장 (다른 탭의 최신 데이터를 덮어쓰지 않게)
+  function flush() { if (saveTimer) commit(); }
 
   // ---------- 되돌리기 / 다시 실행 ----------
   const hist = [{ pages: JSON.stringify(state.pages), current: state.current }];
@@ -298,7 +301,7 @@
     r.readAsDataURL(blob);
   });
   async function exportBackup() {
-    commit();
+    flush();
     savedEl.textContent = "백업 만드는 중…";
     const files = [];
     for (const id of usedFileIds()) {
@@ -445,6 +448,10 @@
     document.title = (p.title || "제목 없음") + " · 미니 노션";
   }
 
+  // 브라우저는 끝 줄바꿈이 보이도록 줄바꿈 하나를 더 붙여 두므로, 읽고 쓸 때 맞춰 줌
+  const codeText = el => el.textContent.replace(/\n$/, "");
+  const showCode = (el, text) => { el.textContent = text.endsWith("\n") ? text + "\n" : text; };
+
   function setPlainEditable(el) {
     try { el.contentEditable = "plaintext-only"; } catch (e) { el.contentEditable = "true"; }
   }
@@ -514,7 +521,7 @@
       setPlainEditable(c);
       c.spellcheck = false;
       c.dataset.placeholder = "코드 (빈 줄에서 Enter로 나가기)";
-      c.textContent = b.text || "";
+      showCode(c, b.text || "");
       row.appendChild(c);
       return row;
     }
@@ -567,7 +574,7 @@
       setPlainEditable(body);
       body.spellcheck = false;
       body.dataset.placeholder = "펼쳤을 때 보일 내용";
-      body.textContent = b.body || "";
+      showCode(body, b.body || "");
       body.hidden = !b.open;
       host.appendChild(body);
       tb.addEventListener("click", () => {
@@ -695,11 +702,15 @@
 
   function setType(b, type, html) {
     const wasCode = b.type === "code";
-    if (html !== undefined) {
-      if (type === "code") b.text = plain(html);
-      else b.html = html;
-    } else if (type === "code" && !wasCode) b.text = plain(b.html || "");
-    else if (wasCode && type !== "code") b.html = esc(b.text || "");
+    if (type === "code") {
+      if (html !== undefined) b.text = plain(html);
+      else if (!wasCode) b.text = plain(b.html || "");
+      delete b.html;
+    } else {
+      if (html !== undefined) b.html = html;
+      else if (wasCode) b.html = esc(b.text || "");
+      delete b.text;
+    }
     b.type = type;
     if (type !== "todo") b.checked = false;
     rerenderBlock(b);
@@ -742,10 +753,10 @@
     checkpoint();
     const p = page();
     const prevEl = editableOf(prev);
-    const joinAt = prevEl.textContent.length;
+    const joinAt = prev.type === "code" ? codeText(prevEl).length : prevEl.textContent.length;
     if (prev.type === "code") {
       prev.text += plain(b.html);
-      prevEl.textContent = prev.text;
+      showCode(prevEl, prev.text);
     } else {
       prev.html = sanitize(prev.html + b.html);
       prevEl.innerHTML = prev.html;
@@ -1096,8 +1107,8 @@
     if (!row) return;
     const b = blockById(row.dataset.id);
     if (!b) return;
-    if (el.classList.contains("code")) { b.text = el.textContent; save(); return; }
-    if (el.classList.contains("tbody")) { b.body = el.textContent; save(); return; }
+    if (el.classList.contains("code")) { b.text = codeText(el); save(); return; }
+    if (el.classList.contains("tbody")) { b.body = codeText(el); save(); return; }
     if (!el.classList.contains("text")) return;
     if (!el.textContent && el.innerHTML) el.innerHTML = "";
     b.html = sanitize(el.innerHTML);
@@ -1191,13 +1202,13 @@
   function codeKey(e, b, el) {
     const collapsed = getSelection().isCollapsed;
     const off = caretOffset(el);
-    const text = el.textContent;
+    const text = codeText(el);
     if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); document.execCommand("insertText", false, "  "); return; }
     const mod = e.ctrlKey || e.metaKey;
-    if (e.key === "Enter" && (mod || (collapsed && off === text.length && text.endsWith("\n")))) {
+    if (e.key === "Enter" && (mod || (collapsed && off >= text.length && text.endsWith("\n")))) {
       e.preventDefault(); // 빈 줄에서 Enter(또는 Ctrl+Enter) → 코드 블록 나가기
       checkpoint();
-      if (!mod) { b.text = text.replace(/\n$/, ""); el.textContent = b.text; }
+      if (!mod) { b.text = text.replace(/\n$/, ""); showCode(el, b.text); }
       const nb = block("p");
       insertAfter(indexOf(b.id), nb);
       focusBlock(nb, 0);
@@ -1212,7 +1223,7 @@
   function bodyKey(e, b, el) {
     const collapsed = getSelection().isCollapsed;
     const off = caretOffset(el);
-    const len = el.textContent.length;
+    const len = codeText(el).length;
     const summary = el.parentElement.querySelector(".text");
     if ((e.key === "ArrowUp" && collapsed && off === 0) || (e.key === "Backspace" && collapsed && off === 0 && !len)) {
       e.preventDefault();
@@ -1397,8 +1408,8 @@
   });
 
   // 앱을 닫거나 다른 앱으로 갈 때 바로 저장
-  addEventListener("pagehide", commit);
-  document.addEventListener("visibilitychange", () => { if (document.hidden) commit(); });
+  addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); });
 
   applyTheme(theme);
   renderAll();
