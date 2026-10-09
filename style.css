@@ -124,6 +124,20 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .block[tabindex]:focus { outline: none; background: var(--accent-soft); }
 .media { flex: 1; min-width: 0; margin: 6px 0; }
 .media img { display: block; max-width: 100%; max-height: 520px; border-radius: 6px; }
+/* 이미지 크기 조절 · 도구 */
+.img-wrap { position: relative; display: inline-block; max-width: 100%; vertical-align: top; }
+.img-wrap.sized img { width: 100%; height: auto; max-height: none; }
+.rs { position: absolute; top: 50%; width: 6px; height: 48px; max-height: 60%; transform: translateY(-50%); border: 1px solid rgba(255, 255, 255, .85); border-radius: 3px; background: rgba(20, 22, 25, .6); cursor: ew-resize; touch-action: none; visibility: hidden; }
+.rs::before { content: ""; position: absolute; inset: -12px -14px; }
+.rs.l { left: 6px; }
+.rs.r { right: 6px; }
+.img-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 2px; padding: 2px; border-radius: 6px; background: rgba(20, 22, 25, .72); visibility: hidden; }
+.img-tools button { min-width: 30px; height: 28px; border: 0; border-radius: 4px; background: none; color: #fff; font-size: 14px; cursor: pointer; }
+.img-tools button:hover { background: rgba(255, 255, 255, .18); }
+.block:hover .rs, .block:hover .img-tools, .block:focus .rs, .block:focus .img-tools, .img-wrap.resizing .rs { visibility: visible; }
+.img-wrap.resizing .img-tools { visibility: hidden; }
+.img-size { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 10px; background: rgba(20, 22, 25, .75); color: #fff; font-size: 12px; pointer-events: none; }
+@media (hover: none) { .rs { width: 10px; } .img-tools button { min-width: 38px; height: 34px; } }
 .file-card { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; margin: 4px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--fg); text-decoration: none; }
 .file-card:hover { background: var(--hover); }
 .file-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

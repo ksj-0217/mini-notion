@@ -293,6 +293,48 @@
     });
   }
 
+  // 이미지 크기: 0이면 원래 크기
+  function setImageWidth(b, wrap, w) {
+    checkpoint();
+    if (w) b.width = w; else delete b.width;
+    wrap.classList.toggle("sized", !!w);
+    wrap.style.width = w ? w + "px" : "";
+    save();
+  }
+  function resizeImage(e, b, wrap, fig, size, side) {
+    if (e.button > 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pid = e.pointerId, sx = e.clientX, start = wrap.offsetWidth;
+    const max = fig.clientWidth;
+    let w = start;
+    wrap.classList.add("sized", "resizing");
+    wrap.style.width = start + "px";
+    size.hidden = false;
+    size.textContent = start + "px";
+    const move = ev => {
+      if (ev.pointerId !== pid) return;
+      ev.preventDefault();
+      const dx = ev.clientX - sx;
+      w = Math.round(Math.min(max, Math.max(60, start + (side === "r" ? dx : -dx))));
+      wrap.style.width = w + "px";
+      size.textContent = w + "px";
+    };
+    const up = ev => {
+      if (ev.pointerId !== pid) return;
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", up);
+      wrap.classList.remove("resizing");
+      size.hidden = true;
+      if (w !== start) setImageWidth(b, wrap, w);
+      else if (!b.width) { wrap.classList.remove("sized"); wrap.style.width = ""; }
+    };
+    document.addEventListener("pointermove", move, { passive: false });
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", up);
+  }
+
   // ---------- 백업 ----------
   const toDataURL = blob => new Promise((res, rej) => {
     const r = new FileReader();
@@ -494,10 +536,42 @@
       row.tabIndex = 0;
       const fig = document.createElement("figure");
       fig.className = "media";
+      const wrap = document.createElement("div");
+      wrap.className = "img-wrap" + (b.width ? " sized" : "");
+      if (b.width) wrap.style.width = b.width + "px";
       const img = document.createElement("img");
       img.alt = b.name || "이미지";
       img.draggable = false;
-      fig.appendChild(img);
+      const size = document.createElement("span");
+      size.className = "img-size";
+      size.hidden = true;
+      // 양쪽 가장자리 막대를 끌어 크기 바꾸기
+      for (const side of ["l", "r"]) {
+        const bar = document.createElement("span");
+        bar.className = "rs " + side;
+        bar.title = "끌어서 크기 바꾸기";
+        bar.addEventListener("pointerdown", e => resizeImage(e, b, wrap, fig, size, side));
+        wrap.appendChild(bar);
+      }
+      const tools = document.createElement("div");
+      tools.className = "img-tools";
+      for (const [label, title, fn] of [
+        ["↺", "원래 크기", () => setImageWidth(b, wrap, 0)],
+        ["⬇", "다운로드", () => downloadFile(b)],
+        ["🗑", "삭제", () => deleteBlock(b)]
+      ]) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = label;
+        btn.title = title;
+        btn.setAttribute("aria-label", title);
+        btn.addEventListener("pointerdown", e => e.stopPropagation());
+        btn.addEventListener("click", e => { e.stopPropagation(); fn(); });
+        tools.appendChild(btn);
+      }
+      wrap.prepend(img);
+      wrap.append(tools, size);
+      fig.appendChild(wrap);
       blobUrl(b.fileId).then(u => { if (u) img.src = u; else fig.replaceChildren(missingEl(b)); });
       row.appendChild(fig);
       return row;
@@ -755,10 +829,10 @@
     const prevEl = editableOf(prev);
     const joinAt = prev.type === "code" ? codeText(prevEl).length : prevEl.textContent.length;
     if (prev.type === "code") {
-      prev.text += plain(b.html);
+      prev.text += b.type === "code" ? b.text : plain(b.html);
       showCode(prevEl, prev.text);
     } else {
-      prev.html = sanitize(prev.html + b.html);
+      prev.html = sanitize(prev.html + (b.type === "code" ? esc(b.text) : b.html));
       prevEl.innerHTML = prev.html;
     }
     p.blocks.splice(indexOf(b.id), 1);
@@ -1191,6 +1265,13 @@
         if (!len) deleteBlock(b, false);
         rowOf(prev.id).focus();
       } else mergeUp(b, prev);
+    } else if (e.key === "Delete" && collapsed && offset === len) {
+      // 끝에서 Delete: 다음 글 블록을 이어 붙이고, 다음이 이미지·파일·구분선이면 선택 (한 번 더 누르면 삭제)
+      const next = page().blocks[indexOf(b.id) + 1];
+      if (!next || (body && !body.hidden)) return;
+      e.preventDefault();
+      if (MEDIA.has(next.type)) rowOf(next.id).focus();
+      else mergeUp(next, b);
     } else if (e.key === "ArrowUp" && collapsed && offset === 0) {
       if (moveFocus(b, -1)) e.preventDefault();
     } else if (e.key === "ArrowDown" && collapsed && offset === len) {
