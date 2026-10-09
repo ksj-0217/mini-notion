@@ -1,6 +1,7 @@
 // 미니 노션 서비스 워커: 앱 파일을 미리 저장해 두고 인터넷 없이도 열리게 합니다.
-// 파일을 고친 뒤에는 CACHE 이름의 숫자를 올려야 폰에 새 버전이 반영됩니다.
-const CACHE = "mini-notion-v4";
+// 인터넷이 되면 항상 최신 파일을 받아 쓰고, 안 되면 저장본을 씁니다.
+// 파일을 고친 뒤에는 CACHE 이름의 숫자도 올려 주세요.
+const CACHE = "mini-notion-v5";
 const FILES = [
   "./",
   "./index.html",
@@ -13,7 +14,12 @@ const FILES = [
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: "reload" → 브라우저에 남은 옛 파일이 아니라 서버의 최신 파일로 저장
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache => cache.addAll(FILES.map(f => new Request(f, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", event => {
@@ -31,10 +37,21 @@ self.addEventListener("fetch", event => {
 
   if (url.origin !== self.location.origin) return;
 
-  // 앱 파일: 저장본을 먼저 쓰고, 없으면 인터넷에서 받기. 페이지 이동은 오프라인이면 index.html로
+  // 앱 파일: 인터넷에서 최신 파일을 먼저 받고(받으면 저장본도 갱신),
+  // 인터넷이 없거나 3초 안에 응답이 없으면 저장본 사용. 페이지 이동은 저장본도 없으면 index.html로
+  const fromCache = () => caches.match(req, { ignoreSearch: true })
+    .then(hit => hit || (req.mode === "navigate" ? caches.match("./index.html") : undefined));
+  const fromNet = fetch(req.url, { cache: "no-cache" }).then(res => {
+    if (res.ok) {
+      const copy = res.clone();
+      caches.open(CACHE).then(cache => cache.put(req, copy));
+    }
+    return res;
+  });
+  const slow = new Promise(resolve => setTimeout(resolve, 3000)).then(fromCache);
   event.respondWith(
-    caches.match(req, { ignoreSearch: true }).then(hit => hit || fetch(req).catch(() => {
-      if (req.mode === "navigate") return caches.match("./index.html");
-    }))
+    Promise.race([fromNet, slow])
+      .then(res => res || fromNet)
+      .catch(() => fromCache().then(hit => hit || Response.error()))
   );
 });
